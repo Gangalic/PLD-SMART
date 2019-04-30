@@ -1,1 +1,1 @@
-web: python server.py -p 31337
+web: python server.py

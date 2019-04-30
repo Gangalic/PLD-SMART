@@ -97,6 +97,6 @@ def get_resource():
 
 
 if __name__ == '__main__':
-    port = 31337 # Default port
+    port = int(os.environ.get('PORT',33507)) # Default port
     app.run(port = port)
     
