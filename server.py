@@ -95,6 +95,10 @@ def change_password():
 def get_resource():
     return jsonify({'data': 'Hello there!'})
 
+@app.route('/', methods = ['GET'])
+def print_shit():
+    print('huinea')
+    return jsonify({'data':'Idi nahui!'})
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT',33507)) # Default port
