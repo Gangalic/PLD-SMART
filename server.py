@@ -98,5 +98,5 @@ def get_resource():
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT',33507)) # Default port
-    app.run('https://pld-smart.herokuapp.com/',port = port)
+    app.run(port = port)
     
