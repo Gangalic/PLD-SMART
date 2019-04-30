@@ -97,6 +97,6 @@ def get_resource():
 
 
 if __name__ == '__main__':
-    port = 80 # Default port
+    port = 8089 # Default port
     app.run(port = port)
     
