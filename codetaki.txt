@@ -1,3 +1,28 @@
+
+Skip to content
+Pull requests
+Issues
+Marketplace
+Explore
+@BJPerez
+
+2
+1
+
+    0
+
+Gangalic/PLD-SMART
+Code
+Issues 0
+Pull requests 0
+Projects 0
+Wiki
+Insights
+PLD-SMART/server.py
+@Gangalic Gangalic asdas c0e8fff a day ago
+@Gangalic
+@Taki-Eddine
+103 lines (80 sloc) 2.92 KB
 #!/usr/bin/env python
 import os
 from hashlib import md5
@@ -100,3 +125,18 @@ if __name__ == '__main__':
     port = 5000 # Default port
     app.run(host= '0.0.0.0', port = port)
     
+
+    © 2019 GitHub, Inc.
+    Terms
+    Privacy
+    Security
+    Status
+    Help
+
+    Contact GitHub
+    Pricing
+    API
+    Training
+    Blog
+    About
+
