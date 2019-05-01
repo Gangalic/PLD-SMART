@@ -1,5 +1,5 @@
 """
-WSGI config for LyonQuest project.
+WSGI config for pldProject project.
 
 It exposes the WSGI callable as a module-level variable named ``application``.
 
@@ -11,6 +11,6 @@ import os
 
 from django.core.wsgi import get_wsgi_application
 
-os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'LyonQuest.settings')
+os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'pldProject.settings')
 
 application = get_wsgi_application()
