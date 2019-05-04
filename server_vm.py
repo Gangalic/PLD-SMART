@@ -46,8 +46,9 @@ class User:
     def search_user(email):
         #DB QUERY ---------------------------------------------------------------
         
-        connect_db() # to connect to the DB
         global dbconx # to have access to the global instance of dbconx
+        if dbconx is None:
+            connect_db() # connect to the DB
         
         cursor = dbconx.cursor()
         cursor.execute("SELECT * FROM users WHERE email = '" + email + "'")
@@ -62,8 +63,9 @@ class User:
     def add_user(user):
         #DB QUERY ---------------------------------------------------------------
         
-        connect_db() # to connect to the DB
         global dbconx # to have access to the global instance of dbconx
+        if dbconx is None:
+            connect_db() # connect to the DB
         
         cursor = dbconx.cursor()
         query = "INSERT INTO users (email, username, pass_hash)\
@@ -108,8 +110,9 @@ def new_user():
 def get_all_routes():
     #DB QUERY ---------------------------------------------------------------
         
-        connect_db() # to connect to the DB
         global dbconx # to have access to the global instance of dbconx
+        if dbconx is None:
+            connect_db() # connect to the DB
         
         cursor = dbconx.cursor()
         query = "SELECT * FROM route"
@@ -132,8 +135,9 @@ def get_all_routes():
 def get_user_current_route():
     #DB QUERY ---------------------------------------------------------------
         
-        connect_db() # to connect to the DB
         global dbconx # to have access to the global instance of dbconx
+        if dbconx is None:
+            connect_db() # connect to the DB
         
         cursor = dbconx.cursor()
        
@@ -157,8 +161,9 @@ def get_user_current_route():
 def get_riddle_by_number():
     #DB QUERY ---------------------------------------------------------------
         
-        connect_db() # to connect to the DB
         global dbconx # to have access to the global instance of dbconx
+        if dbconx is None:
+            connect_db() # connect to the DB
         
         cursor = dbconx.cursor()
        
@@ -185,8 +190,9 @@ def get_riddle_by_number():
 def user_start_route():
     #DB QUERY ---------------------------------------------------------------
         
-        connect_db() # to connect to the DB
         global dbconx # to have access to the global instance of dbconx
+        if dbconx is None:
+            connect_db() # connect to the DB
         
         cursor = dbconx.cursor()
        
