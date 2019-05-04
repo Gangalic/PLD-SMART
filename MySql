@@ -1,0 +1,29 @@
+# pass : P4$sw0rd
+#CREATE ROUTE TABLE:
+CREATE TABLE route (
+	route_id INT AUTO_INCREMENT,
+    title VARCHAR(32),
+    description TEXT not null,
+    PRIMARY KEY (route_id)
+);
+#CREATE RIDDLE TABLE
+CREATE TABLE riddle(
+	riddle_number INT,
+    route_id INT,
+    description TEXT,
+    type VARCHAR(32),
+    solution VARCHAR(128),
+    PRIMARY KEY (riddle_number, route_id),
+    FOREIGN KEY (route_id) REFERENCES route(route_id)
+    
+);
+#CREATE TABLE PLAYS
+CREATE TABLE plays (
+	email VARCHAR(64),
+    route_id INT,
+    current_riddle INT DEFAULT 1 NOT NULL,
+   	current_status ENUM('started', 'finished') NOT NULL,
+    PRIMARY KEY(email, route_id),
+    FOREIGN KEY (email) REFERENCES users(email),
+    FOREIGN KEY (route_id) REFERENCES route(route_id)
+);
