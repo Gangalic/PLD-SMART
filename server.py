@@ -1,10 +1,11 @@
-#!/usr/bin/env python
 import os
 import mysql.connector
+import geopy.distance
 from mysql.connector import Error
 from mysql.connector import errorcode
 from hashlib import md5
 from flask import Flask, abort, request, jsonify, g, url_for
+
 
 
 # initialization
@@ -27,10 +28,10 @@ class User:
         self.password_hash = password_hash
 
     def hash_password(self, password):
-        self.password_hash = md5(password).hexdigest()
+        self.password_hash = md5(password.encode('utf-8')).hexdigest()
 
     def verify_password(self, password):
-        return md5(password).hexdigest() == self.password_hash
+        return md5(password.encode('utf-8')).hexdigest() == self.password_hash
     
     @staticmethod
     def search_user(email):
@@ -97,6 +98,16 @@ def parse_dbresponse(cursor):
 def verify_type_password(solution, answer):
     return answer.upper() == solution.upper()
 
+def verify_geocoords(solution, longitude, latitude):
+    coords = solution.split(',')
+    c_long = float(coords[0])
+    c_lat = float(coords[1])
+    delta = float(coords[2])
+
+    distance = geopy.distance.geodesic((c_lat, c_long),(latitude,longitude)).m
+
+    return distance <= delta
+
 
 #   |~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -122,6 +133,7 @@ def get_all_routes():
             number_of_ratings = 0
             avg = -1
             comments = []
+            """
             for rt in specific_records:
                 user_rating = int(rt['user_rating'])
                 if(user_rating >= 0):
@@ -132,14 +144,15 @@ def get_all_routes():
                 
             if number_of_ratings > 0:
                 avg = ratings_sum / number_of_ratings
-            
-            
+            */
+            """
+
             route = {
                 'route_id' : row['route_id'],
                 'title' : row['title'],
                 'description' : row['description'],
-                'avg_rating' : avg,
-                'number_of_votes' : number_of_ratings,
+                'avg_rating' : 4,
+                'number_of_votes' : 23,
                 'comments' : comments
             }
 
@@ -234,11 +247,10 @@ def user_start_route():
         return jsonify(riddle)
     #DB QUERY END ------------------------------------------------------------
 
-@app.route('/lyon_quest/game/verifiy_riddle/', methods = ['POST'])
+@app.route('/lyon_quest/game/verify_riddle/', methods = ['POST'])
 def verifiy_riddle():
     email = request.json['email']
     route_id = str(request.json['route_id'])
-    answer = request.json['solution']
     riddle_status = 'started'
     result = {}
     #DB QUERY ---------------------------------------------------------------
@@ -261,8 +273,13 @@ def verifiy_riddle():
     #DB QUERY END ------------------------------------------------------------
     correct = False
     if (riddle_type == 'password'):
+        answer = request.json['solution']
         correct = verify_type_password(riddle_solution, answer)
-    
+    elif riddle_type == 'geocoords':
+        lat = float(request.json('lat'))
+        lon = float(request.json('lon'))
+        correct = verify_geocoords(solution, lon, lat)
+        
     if (correct):
         result['status'] = 'success'
         verify_next_riddle_query = " \
@@ -278,11 +295,9 @@ def verifiy_riddle():
             result['finished'] = 'true'
         else:
             result['finished'] = 'false'
-            result['riddle'] = {
-                'description' : records[0]['description'],
-                'type' : records[0]['type']
-            }
-        
+            result['type'] = records[0]['type']
+            result['description'] = records[0]['description']
+            
         
         update_user_progress_query = "\
             UPDATE plays \
@@ -322,7 +337,7 @@ def rate_route():
                     user_comment = '" + comment + "' \
                 WHERE \
                     email = '" + request.json['email'] + "' AND\
-                    route_id = '" + str(request.json['route_id']) + "'\
+                    route_id = '" + str(route_id) + "'\
         "
 
         cursor.execute(query)
@@ -331,7 +346,34 @@ def rate_route():
 
         return jsonify({'status' : 'success'})
     #DB QUERY END ------------------------------------------------------------
+@app.route('/lyon_quest/game/add_route/', methods = ['POST'])
+def add_route():
+    route_title = request.json['name']
+    route_description = request.json['description']
 
+    create_route_query = "\
+        INSERT INTO route (title, description)\
+        VALUES \
+        ('" + route_title + "', '" + route_description + "') \
+    "
+
+    curosor = dbconx.cursor()
+    curosor.execute(create_route_query)
+    dbconx.commit()
+    route_id = str(curosor.lastrowid)
+    riddle_number = 1
+    create_riddles_query = "INSERT INTO riddle (riddle_number, route_id , description, type, solution) VALUES"
+
+    for riddle in request.json['riddles']:
+        riddle_type = riddle['type']
+        riddle_description = riddle['text']
+        riddle_solution = riddle['solution']
+        create_riddles_query += "(" + str(riddle_number) + ", " + route_id + ", '" + riddle_description + "', '" + riddle_type + "', '" + riddle_solution + "'),"
+        riddle_number = riddle_number + 1
+    curosor.execute(create_riddles_query[:-1])
+    dbconx.commit()
+    curosor.close()
+    return jsonify({'statu' : 'success'})
 ##------------------------------------------------------------------------
 
 
