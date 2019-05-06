@@ -278,8 +278,8 @@ def verifiy_riddle():
     elif riddle_type == 'geocoords':
         lat = float(request.json('lat'))
         lon = float(request.json('lon'))
-        correct = verify_geocoords(solution, lon, lat)
-        
+        correct = verify_geocoords(riddle_solution, lon, lat)
+
     if (correct):
         result['status'] = 'success'
         verify_next_riddle_query = " \
