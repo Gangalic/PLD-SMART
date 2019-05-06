@@ -15,7 +15,7 @@ dbconx = None
 #to call each time we connect to MySQL data-base
 def connect_db():
     try:
-        global dbconx
+        global dbconx #to change the global instance
         dbconx = mysql.connector.connect(host='localhost',
                                          database = 'smart',
                                          user = 'flask',
