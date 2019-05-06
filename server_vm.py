@@ -19,8 +19,8 @@ def connect_db():
                                                 database = 'smart',
                                                 user = 'flask',
                                                 password = 'flaskpass')
-        except mysql.connector.Error as error :
-    print("Failed inserting record into python_users table {}".format(error))
+    except mysql.connector.Error as error :
+        print("Failed inserting record into python_users table {}".format(error))
 
 
 ##------------------------------------------------------------------------
