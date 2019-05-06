@@ -15,10 +15,11 @@ dbconx = None
 #to call each time we connect to MySQL data-base
 def connect_db():
     try:
-            dbconx = mysql.connector.connect(host='localhost',
-                                                database = 'smart',
-                                                user = 'flask',
-                                                password = 'flaskpass')
+        global dbconx
+        dbconx = mysql.connector.connect(host='localhost',
+                                         database = 'smart',
+                                         user = 'flask',
+                                         password = 'flaskpass')
     except mysql.connector.Error as error :
         print("Failed inserting record into python_users table {}".format(error))
 
