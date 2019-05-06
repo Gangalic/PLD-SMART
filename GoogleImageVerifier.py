@@ -19,7 +19,7 @@ class GoogleImageVerifier:
         response = self.client.label_detection(image=image)
         labels = response.label_annotations
         for label in labels:
-            print(f'{label.description} : {label.score}')
+            # print(f'{label.description} : {label.score}')
         for label in labels:
             if (label.description == targetLabel and label.score > 0.55):
                 return True 
@@ -27,17 +27,17 @@ class GoogleImageVerifier:
         
 
 
-## Use example
-verifier = GoogleImageVerifier('creds.json')
+# ## Use example
+# verifier = GoogleImageVerifier('creds.json')
 
-# The name of the image file to annotate
-file_name = os.path.join(
-    os.path.dirname(__file__),
-    '86843854_o.jpg')
+# # The name of the image file to annotate
+# file_name = os.path.join(
+#     os.path.dirname(__file__),
+#     '86843854_o.jpg')
 
-# Loads the image into memory and verify it against a label
-with io.open(file_name, 'rb') as image_file:
-    content = image_file.read()
-    validImage = verifier.verify(content,"Stone carving")
-    print(validImage)
+# # Loads the image into memory and verify it against a label
+# with io.open(file_name, 'rb') as image_file:
+#     content = image_file.read()
+#     validImage = verifier.verify(content,"Stone carving")
+#     print(validImage)
 

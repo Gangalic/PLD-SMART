@@ -53,16 +53,16 @@ class CustomImageVerifier:
         return (predLabel == targetLabel and probaLabel > 0.9)
 
 
-## Use example
-verifier = CustomImageVerifier('resnet.pth')
+# ## Use example
+# verifier = CustomImageVerifier('resnet.pth')
 
-print(verifier.classNames)
+# print(verifier.classNames)
 
-# The name of the image file to annotate
-file_name = os.path.join(
-    os.path.dirname(__file__),
-    'bwfruits.jpg')
+# # The name of the image file to annotate
+# file_name = os.path.join(
+#     os.path.dirname(__file__),
+#     'bwfruits.jpg')
 
-# Loads the image into memory and verify it against a label
-with Image.open(file_name) as image:
-    print('Result : ', verifier.verify(image,"pont_raymond_barre"))
+# # Loads the image into memory and verify it against a label
+# with Image.open(file_name) as image:
+#     print('Result : ', verifier.verify(image,"pont_raymond_barre"))
