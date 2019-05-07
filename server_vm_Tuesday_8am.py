@@ -173,7 +173,6 @@ def get_all_routes():
         query = "SELECT * FROM route"
         cursor.execute(query)
         records = parse_dbresponse(cursor)
-        print(records)
         routes = []
         for row in records:
 
@@ -377,7 +376,6 @@ def verifiy_riddle():
     riddle_type = row['type']
     riddle_solution = row['solution']    
     correct = False
-    print(riddle_type)
     if (riddle_type == 'password'):
         answer = request.json['solution']
         correct = verify_type_password(riddle_solution, answer)
@@ -430,7 +428,6 @@ def verifiy_riddle():
     else:
         result['status'] = 'failure'
     dbconx.close()
-    print(result)
     return jsonify(result)
 
 @app.route('/lyon_quest/game/rate_route/', methods = ['POST'])
