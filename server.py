@@ -1,6 +1,9 @@
 import os
 import mysql.connector
 import geopy.distance
+import base64
+from GoogleImageVerifier import GoogleImageVerifier
+from CustomImageVerifier import CustomImageVerifier
 from mysql.connector import Error
 from mysql.connector import errorcode
 from hashlib import md5
@@ -100,15 +103,43 @@ def verify_type_password(solution, answer):
 
 def verify_geocoords(solution, longitude, latitude):
     coords = solution.split(',')
-    c_long = float(coords[0])
-    c_lat = float(coords[1])
+    c_lat = float(coords[0])
+    c_long = float(coords[1])
     delta = float(coords[2])
 
     distance = geopy.distance.geodesic((c_lat, c_long),(latitude,longitude)).m
-
     return distance <= delta
 
+def verifiy_picture(solution, picture):
+    params = solution.split(',')
+    label = params[0]
+    method = params[1]
+    correct = False
+    if (method == 'google'):
+        verifier = GoogleImageVerifier('creds.json')
+        correct = verifier.verify(picture,label)
+    else:
+        verifier = CustomImageVerifier('resnet.pth')
+        correct = verifier.verify(picture, label)
 
+    return correct
+
+def verify_geocoords_picture(solution, picture, lon, lat):
+    params = solution.split(',')
+    c_lat = float(params[0])
+    c_long = float(params[1])
+    delta = float(params[2])
+    label = params[3]
+    method = params[4]
+    distance = geopy.distance.geodesic((c_lat, c_long),(lat,lon)).m
+    correct = True
+    if (method == 'google'):
+        verifier = GoogleImageVerifier('creds.json')
+        correct = verifier.verify(picture, label)
+    else:
+        verifier = CustomImageVerifier('resnet.pth')
+        correct = verifier.verify(picture, label)
+    return ( distance <= delta ) and correct
 #   |~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 @app.route('/lyon_quest/game/routes/', methods = ['GET'])
@@ -131,9 +162,9 @@ def get_all_routes():
             specific_records = parse_dbresponse(cursor)
             ratings_sum = 0
             number_of_ratings = 0
-            avg = -1
+            avg = 0
             comments = []
-            """
+            
             for rt in specific_records:
                 user_rating = int(rt['user_rating'])
                 if(user_rating >= 0):
@@ -144,15 +175,15 @@ def get_all_routes():
                 
             if number_of_ratings > 0:
                 avg = ratings_sum / number_of_ratings
-            */
-            """
+            
+        
 
             route = {
                 'route_id' : row['route_id'],
                 'title' : row['title'],
                 'description' : row['description'],
-                'avg_rating' : 4,
-                'number_of_votes' : 23,
+                'avg_rating' : avg,
+                'number_of_votes' : number_of_ratings,
                 'comments' : comments
             }
 
@@ -161,9 +192,35 @@ def get_all_routes():
         return jsonify({'routes' : routes})
     #DB QUERY END ------------------------------------------------------------
 
+@app.route('/lyon_quest/game/user_stats/', methods = ['POST'])
+def user_stats():
+    #DB QUERY ---------------------------------------------------------------
+    cursor = dbconx.cursor()
+    email = request.json['email']
+    query = "\
+        SELECT users.email, users.username, SUM(IF(plays.current_status = 'finished', 1, 0))as score\
+        FROM plays NATURAL JOIN users\
+        GROUP by users.email\
+        ORDER by score desc\
+    "
+
+    cursor.execute(query)
+    records = parse_dbresponse(cursor)
+    rank = 0
+    score = 0
+    username = ''
+    for player in records:
+        rank = rank + 1
+        if player['email'] == email:
+            score = player['score']
+            username = player['username']
+            break
+
+    return jsonify({'rank': rank, 'score' : score, 'username': username})
+
+
 @app.route('/lyon_quest/game/user_route/', methods = ['POST'])
 def get_user_current_route():
-    #DB QUERY ---------------------------------------------------------------
         cursor = dbconx.cursor()
        
         email = request.json['email']
@@ -243,11 +300,11 @@ def user_start_route():
             'description' : row['description'],
             'type' : row['type']
         }
-
         return jsonify(riddle)
     #DB QUERY END ------------------------------------------------------------
 
 @app.route('/lyon_quest/game/verify_riddle/', methods = ['POST'])
+
 def verifiy_riddle():
     email = request.json['email']
     route_id = str(request.json['route_id'])
@@ -272,13 +329,22 @@ def verifiy_riddle():
     riddle_solution = row['solution']
     #DB QUERY END ------------------------------------------------------------
     correct = False
+    print(riddle_type)
     if (riddle_type == 'password'):
         answer = request.json['solution']
         correct = verify_type_password(riddle_solution, answer)
     elif riddle_type == 'geocoords':
-        lat = float(request.json('lat'))
-        lon = float(request.json('lon'))
+        lat = float(request.json['latitude'])
+        lon = float(request.json['longitude'])
         correct = verify_geocoords(riddle_solution, lon, lat)
+    elif riddle_type == 'picture':
+        picture = base64.b64decode(request.json['picture'])
+        correct = verifiy_picture(riddle_solution, picture)
+    elif riddle_type == 'dest_pict':
+        lat = float(request.json['latitude'])
+        lon = float(request.json['longitude'])
+        picture = base64.b64decode(request.json['picture'])
+        correct = verify_geocoords_picture(riddle_solution, picture, lon, lat)
 
     if (correct):
         result['status'] = 'success'
@@ -315,7 +381,7 @@ def verifiy_riddle():
 
     else:
         result['status'] = 'failure'
-    
+    print(result)
     return jsonify(result)
 
 @app.route('/lyon_quest/game/rate_route/', methods = ['POST'])
@@ -374,6 +440,7 @@ def add_route():
     dbconx.commit()
     curosor.close()
     return jsonify({'statu' : 'success'})
+
 ##------------------------------------------------------------------------
 
 
