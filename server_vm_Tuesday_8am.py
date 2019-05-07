@@ -136,10 +136,10 @@ def verifiy_picture(solution, picture):
     method = params[1]
     correct = False
     if (method == 'google'):
-        verifier = GoogleImageVerifier('creds.json')
+        verifier = GoogleImageVerifier('/var/www/html/lyon_quest/creds.json')
         correct = verifier.verify(picture,label)
     else:
-        verifier = CustomImageVerifier('resnet.pth')
+        verifier = CustomImageVerifier('/var/www/html/lyon_quest/resnet.pth')
         correct = verifier.verify(picture, label)
 
     return correct
@@ -154,10 +154,10 @@ def verify_geocoords_picture(solution, picture, lon, lat):
     distance = geopy.distance.geodesic((c_lat, c_long),(lat,lon)).m
     correct = True
     if (method == 'google'):
-        verifier = GoogleImageVerifier('creds.json')
+        verifier = GoogleImageVerifier('/var/www/html/lyon_quest/creds.json')
         correct = verifier.verify(picture, label)
     else:
-        verifier = CustomImageVerifier('resnet.pth')
+        verifier = CustomImageVerifier('/var/www/html/lyon_quest/resnet.pth')
         correct = verifier.verify(picture, label)
     return ( distance <= delta ) and correct
 #   |~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
