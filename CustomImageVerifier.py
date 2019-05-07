@@ -1,15 +1,12 @@
 import io
+from io import BytesIO
 import os
+import sys
 from PIL import Image
 import pickle
-
-#import pytorch
 import torch
 from torchvision import transforms
-
 import torchvision
-print(torchvision.__version__)
-print(torch.__version__)
 
 data_transforms = {
     'test': transforms.Compose([
@@ -31,8 +28,16 @@ class CustomImageVerifier:
             self.classNames = pickle.load(f)
 
     def verify(self,image,targetLabel):
+        """"
+        tempo_file = open('tmp_image.png','wb')
+        tempo_file.write(image)
+        tempo_file.close()
+
+        image = Image.open('tmp_image.png')
+        """
+        
+        image = Image.open(BytesIO(image))
         image = data_transforms['test'](image).unsqueeze(0)
-        # print(image.shape)
         outputs = self.model(image)
 
         softmax = torch.nn.Softmax()
@@ -52,17 +57,19 @@ class CustomImageVerifier:
 
         return (predLabel == targetLabel and probaLabel > 0.9)
 
+"""
+## Use example
+verifier = CustomImageVerifier('resnet.pth')
 
-# ## Use example
-# verifier = CustomImageVerifier('resnet.pth')
+print(verifier.classNames)
 
-# print(verifier.classNames)
+# The name of the image file to annotate
+file_name = os.path.join(
+    os.path.dirname(__file__),
+    'bwfruits.jpg')
 
-# # The name of the image file to annotate
-# file_name = os.path.join(
-#     os.path.dirname(__file__),
-#     'bwfruits.jpg')
+# Loads the image into memory and verify it against a label
+with Image.open(file_name) as image:
+    print('Result : ', verifier.verify(image,"pont_raymond_barre"))
 
-# # Loads the image into memory and verify it against a label
-# with Image.open(file_name) as image:
-#     print('Result : ', verifier.verify(image,"pont_raymond_barre"))
+"""
