@@ -15,7 +15,16 @@ from flask import Flask, abort, request, jsonify, g, url_for
 app = Flask(__name__)
 dbconx = None
 
-
+#to call each time we connect to MySQL data-base
+def connect_db():
+    try:
+        global dbconx #to change the global instance
+        dbconx = mysql.connector.connect(host='localhost',
+                                         database = 'smart',
+                                         user = 'flask',
+                                         password = 'flaskpass')
+    except mysql.connector.Error as error :
+        print("Failed to log in {}".format(error))
 
 ##------------------------------------------------------------------------
 #   |   This section is dedicated for services responsible for users managment
@@ -39,6 +48,11 @@ class User:
     @staticmethod
     def search_user(email):
         #DB QUERY ---------------------------------------------------------------
+        
+        global dbconx # to have access to the global instance of dbconx
+        if dbconx is None:
+            connect_db() # connect to the DB
+
         cursor = dbconx.cursor()
         cursor.execute("SELECT * FROM users WHERE email = '" + email + "'")
         records = cursor.fetchall()
@@ -51,6 +65,11 @@ class User:
     @staticmethod
     def add_user(user):
         #DB QUERY ---------------------------------------------------------------
+        
+        global dbconx # to have access to the global instance of dbconx
+        if dbconx is None:
+            connect_db() # connect to the DB
+
         cursor = dbconx.cursor()
         query = "INSERT INTO users (email, username, pass_hash)\
             VALUES(\
@@ -126,56 +145,66 @@ def verifiy_picture(solution, picture):
 @app.route('/lyon_quest/game/routes/', methods = ['GET'])
 def get_all_routes():
     #DB QUERY ---------------------------------------------------------------
-        cursor = dbconx.cursor()
-        query = "SELECT * FROM route"
-        cursor.execute(query)
-        records = parse_dbresponse(cursor)
-        routes = []
-        for row in records:
 
-            specific_query = " \
-                SELECT plays.email, plays.user_comment, plays.user_rating \
-                FROM plays \
-                WHERE plays.route_id = '" + str(row['route_id']) + "' \
-            "
+    global dbconx # to have access to the global instance of dbconx
+    if dbconx is None:
+        connect_db() # connect to the DB
 
-            cursor.execute(specific_query)
-            specific_records = parse_dbresponse(cursor)
-            ratings_sum = 0
-            number_of_ratings = 0
-            avg = 0
-            comments = []
-            
-            for rt in specific_records:
-                user_rating = int(rt['user_rating'])
-                if(user_rating >= 0):
-                    comments.append({'email' : rt['email'] , 'score' : user_rating, 'comment' : rt['user_comment']})
-                    ratings_sum = ratings_sum + user_rating
-                    number_of_ratings = number_of_ratings + 1
-                
-                
-            if number_of_ratings > 0:
-                avg = ratings_sum / number_of_ratings
-            
-        
+    cursor = dbconx.cursor()
+    query = "SELECT * FROM route"
+    cursor.execute(query)
+    records = parse_dbresponse(cursor)
+    routes = []
+    for row in records:
 
-            route = {
-                'route_id' : row['route_id'],
-                'title' : row['title'],
-                'description' : row['description'],
-                'avg_rating' : avg,
-                'number_of_votes' : number_of_ratings,
-                'comments' : comments
-            }
+        specific_query = " \
+            SELECT plays.email, plays.user_comment, plays.user_rating \
+            FROM plays \
+            WHERE plays.route_id = '" + str(row['route_id']) + "' \
+        "
 
-            routes.append(route)
-        cursor.close()
-        return jsonify({'routes' : routes})
+        cursor.execute(specific_query)
+        specific_records = parse_dbresponse(cursor)
+        ratings_sum = 0
+        number_of_ratings = 0
+        avg = 0
+        comments = []
+
+        for rt in specific_records:
+            user_rating = int(rt['user_rating'])
+            if(user_rating >= 0):
+                comments.append({'email' : rt['email'] , 'score' : user_rating, 'comment' : rt['user_comment']})
+                ratings_sum = ratings_sum + user_rating
+                number_of_ratings = number_of_ratings + 1
+
+
+        if number_of_ratings > 0:
+            avg = ratings_sum / number_of_ratings
+
+
+
+        route = {
+            'route_id' : row['route_id'],
+            'title' : row['title'],
+            'description' : row['description'],
+            'avg_rating' : avg,
+            'number_of_votes' : number_of_ratings,
+            'comments' : comments
+        }
+
+        routes.append(route)
+    cursor.close()
+    return jsonify({'routes' : routes})
     #DB QUERY END ------------------------------------------------------------
 
 @app.route('/lyon_quest/game/user_stats/', methods = ['POST'])
 def user_stats():
     #DB QUERY ---------------------------------------------------------------
+    
+    global dbconx # to have access to the global instance of dbconx
+    if dbconx is None:
+        connect_db() # connect to the DB
+
     cursor = dbconx.cursor()
     email = request.json['email']
     query = "\
@@ -202,86 +231,98 @@ def user_stats():
 
 @app.route('/lyon_quest/game/user_route/', methods = ['POST'])
 def get_user_current_route():
-        cursor = dbconx.cursor()
-       
-        email = request.json['email']
-        query = "   SELECT *    \
-                    FROM route NATURAL JOIN plays NATURAL JOIN users    \
-                    WHERE current_status = 'started' AND email = '" + email + "' \
-                "
-        cursor.execute(query)
-        records = parse_dbresponse(cursor)
-        cursor.close()
-        game = {
-                'title' : records[0]['title'],
-                'description' : records[0]['description'],
-                'current_riddle' : records[0]['current_riddle']
-        }
-        return jsonify(game)
+        
+    global dbconx # to have access to the global instance of dbconx
+    if dbconx is None:
+        connect_db() # connect to the DB
+
+    cursor = dbconx.cursor()
+    email = request.json['email']
+    query = "   SELECT *    \
+                FROM route NATURAL JOIN plays NATURAL JOIN users    \
+                WHERE current_status = 'started' AND email = '" + email + "' \
+            "
+    cursor.execute(query)
+    records = parse_dbresponse(cursor)
+    cursor.close()
+    game = {
+            'title' : records[0]['title'],
+            'description' : records[0]['description'],
+            'current_riddle' : records[0]['current_riddle']
+    }
+    return jsonify(game)
     #DB QUERY END ------------------------------------------------------------
 
 @app.route('/lyon_quest/game/riddle/', methods = ['POST'])
 def get_riddle_by_number():
     #DB QUERY ---------------------------------------------------------------
-        cursor = dbconx.cursor()
-       
-        riddle_number = request.json['riddle_number']
-        route = request.json['route_id']
-        query = "SELECT * \
-                FROM route JOIN riddle WHERE \
-                route.route_id = riddle.route_id AND\
-                route.route_id = '" + route + "' \
-                AND riddle_number = '" + riddle_number + "'\
-                "
-        cursor.execute(query)
-        records = parse_dbresponse(cursor)
-        cursor.close()
-        row = records[0]
-        riddle = {
-            'description' : row['description'],
-            'type' : row['type']
-        }
-        return jsonify(riddle)
+
+    global dbconx # to have access to the global instance of dbconx
+    if dbconx is None:
+        connect_db() # connect to the DB
+
+    cursor = dbconx.cursor()
+    riddle_number = request.json['riddle_number']
+    route = request.json['route_id']
+    query = "SELECT * \
+            FROM route JOIN riddle WHERE \
+            route.route_id = riddle.route_id AND\
+            route.route_id = '" + route + "' \
+            AND riddle_number = '" + riddle_number + "'\
+            "
+    cursor.execute(query)
+    records = parse_dbresponse(cursor)
+    cursor.close()
+    row = records[0]
+    riddle = {
+        'description' : row['description'],
+        'type' : row['type']
+    }
+    return jsonify(riddle)
     #DB QUERY END ------------------------------------------------------------
 
 
 @app.route('/lyon_quest/game/user_start_route/', methods = ['POST'])
 def user_start_route():
     #DB QUERY ---------------------------------------------------------------
-        cursor = dbconx.cursor()
-       
-        route_id = str(request.json['route_id'])
-        email = request.json['email']
 
-        delete_query = "\
-                    DELETE FROM plays\
-                    WHERE email = '" + email + "' AND route_id = '" + route_id + "' \
+    global dbconx # to have access to the global instance of dbconx
+    if dbconx is None:
+        connect_db() # connect to the DB
+
+    cursor = dbconx.cursor()
+    route_id = str(request.json['route_id'])
+    email = request.json['email']
+
+    delete_query = "\
+                DELETE FROM plays\
+                WHERE email = '" + email + "' AND route_id = '" + route_id + "' \
+            "
+    cursor.execute(delete_query)        
+
+    insert_query = "\
+                INSERT INTO plays (email, route_id)\
+                VALUES ( '" + email + "', '" + route_id + "') \
                 "
-        cursor.execute(delete_query)        
-        
-        insert_query = "\
-                    INSERT INTO plays (email, route_id)\
-                    VALUES ( '" + email + "', '" + route_id + "') \
-                    "
-        cursor.execute(insert_query)
-        dbconx.commit()
+    cursor.execute(insert_query)
+    dbconx.commit()
 
-        get_first_riddle_query = "\
-                                SELECT * FROM riddle\
-                                WHERE riddle_number = '1' AND \
-                                route_id = '" + route_id + "'\
-                            "
+    get_first_riddle_query = "\
+                            SELECT * FROM riddle\
+                            WHERE riddle_number = '1' AND \
+                            route_id = '" + route_id + "'\
+                        "
 
-        cursor.execute(get_first_riddle_query)
-        records = parse_dbresponse(cursor)
-        cursor.close()
-        row = records[0]
+    cursor.execute(get_first_riddle_query)
+    records = parse_dbresponse(cursor)
+    cursor.close()
+    row = records[0]
 
-        riddle = {
-            'description' : row['description'],
-            'type' : row['type']
-        }
-        return jsonify(riddle)
+    riddle = {
+        'description' : row['description'],
+        'type' : row['type']
+    }
+    return jsonify(riddle)
     #DB QUERY END ------------------------------------------------------------
 
 @app.route('/lyon_quest/game/verify_riddle/', methods = ['POST'])
@@ -291,6 +332,11 @@ def verifiy_riddle():
     riddle_status = 'started'
     result = {}
     #DB QUERY ---------------------------------------------------------------
+
+    global dbconx # to have access to the global instance of dbconx
+    if dbconx is None:
+        connect_db() # connect to the DB
+
     cursor = dbconx.cursor()
     first_query = "\
                         SELECT riddle.riddle_number, riddle.type, riddle.solution\
@@ -361,30 +407,35 @@ def verifiy_riddle():
 @app.route('/lyon_quest/game/rate_route/', methods = ['POST'])
 def rate_route():
      #DB QUERY ---------------------------------------------------------------
-        cursor = dbconx.cursor()
-        route_id = request.json['route_id']
-        score = ''
-        comment = ''
-        if 'score' in request.json:
-            score = str(request.json['score'])
-        if 'comment' in request.json:
-            comment = request.json['comment']
 
-        query = " \
-                UPDATE plays \
-                SET \
-                    user_rating = " + score + ", \
-                    user_comment = '" + comment + "' \
-                WHERE \
-                    email = '" + request.json['email'] + "' AND\
-                    route_id = '" + str(route_id) + "'\
-        "
+    global dbconx # to have access to the global instance of dbconx
+    if dbconx is None:
+        connect_db() # connect to the DB
 
-        cursor.execute(query)
-        dbconx.commit()
-        cursor.close()
+    cursor = dbconx.cursor()
+    route_id = request.json['route_id']
+    score = ''
+    comment = ''
+    if 'score' in request.json:
+        score = str(request.json['score'])
+    if 'comment' in request.json:
+        comment = request.json['comment']
 
-        return jsonify({'status' : 'success'})
+    query = " \
+            UPDATE plays \
+            SET \
+                user_rating = " + score + ", \
+                user_comment = '" + comment + "' \
+            WHERE \
+                email = '" + request.json['email'] + "' AND\
+                route_id = '" + str(route_id) + "'\
+    "
+
+    cursor.execute(query)
+    dbconx.commit()
+    cursor.close()
+
+    return jsonify({'status' : 'success'})
     #DB QUERY END ------------------------------------------------------------
 @app.route('/lyon_quest/game/add_route/', methods = ['POST'])
 def add_route():
@@ -396,6 +447,10 @@ def add_route():
         VALUES \
         ('" + route_title + "', '" + route_description + "') \
     "
+    
+    global dbconx # to have access to the global instance of dbconx
+    if dbconx is None:
+        connect_db() # connect to the DB
 
     curosor = dbconx.cursor()
     curosor.execute(create_route_query)
@@ -422,18 +477,3 @@ def add_route():
 @app.route('/lyon_quest/resource/', methods = ['GET'])
 def get_resource():
     return jsonify({'data': 'Hello there!'})
-
-
-
-
-
-if __name__ == '__main__':
-    try:
-        dbconx = mysql.connector.connect(host='localhost',
-                                            database = 'smart',
-                                            user = 'flask',
-                                            password = 'flaskpass')
-    except mysql.connector.Error as error :
-        print("Error : {}".format(error))
-
-app.run(host = '0.0.0.0', port = 5000)
