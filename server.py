@@ -192,6 +192,49 @@ def get_all_routes():
         return jsonify({'routes' : routes})
     #DB QUERY END ------------------------------------------------------------
 
+@app.route('/lyon_quest/game/route_comments/', methods = ['POST'])
+def get_route_comments():
+ #DB QUERY ---------------------------------------------------------------
+        print(request.json)
+        cursor = dbconx.cursor()
+        query = "SELECT * FROM route WHERE route_id = " + str(request.json['route_id'])
+        cursor.execute(query)
+        records = parse_dbresponse(cursor)
+        row = records[0]
+
+        specific_query = " \
+            SELECT plays.email, plays.user_comment, plays.user_rating \
+            FROM plays \
+            WHERE plays.route_id = '" + str(row['route_id']) + "' \
+        "
+
+        cursor.execute(specific_query)
+        specific_records = parse_dbresponse(cursor)
+        ratings_sum = 0
+        number_of_ratings = 0
+        avg = 0
+        comments = []
+        
+        for rt in specific_records:
+            user_rating = int(rt['user_rating'])
+            if(user_rating >= 0):
+                comments.append({'email' : rt['email'] , 'score' : user_rating, 'comment' : rt['user_comment']})
+                ratings_sum = ratings_sum + user_rating
+                number_of_ratings = number_of_ratings + 1
+            
+            
+        if number_of_ratings > 0:
+            avg = ratings_sum / number_of_ratings
+            
+        
+
+        comments = {
+            'comments' : comments
+        }
+
+        cursor.close()
+        return jsonify(comments)
+
 @app.route('/lyon_quest/game/user_stats/', methods = ['POST'])
 def user_stats():
     #DB QUERY ---------------------------------------------------------------
@@ -414,6 +457,7 @@ def rate_route():
     #DB QUERY END ------------------------------------------------------------
 @app.route('/lyon_quest/game/add_route/', methods = ['POST'])
 def add_route():
+    print(request.json)
     route_title = request.json['name']
     route_description = request.json['description']
 
@@ -432,14 +476,26 @@ def add_route():
 
     for riddle in request.json['riddles']:
         riddle_type = riddle['type']
+        if riddle_type == 'password':
+            riddle_solution = riddle['solution']
+        elif riddle_type == "geocoords":
+            riddle_solution = str(riddle['latitude']) + ',' + str(riddle['longitude']) + ',' + str(riddle['delta'])
+        elif riddle_type == "picture":
+            riddle_solution = riddle['solution'] + ',' + riddle['method']
         riddle_description = riddle['text']
-        riddle_solution = riddle['solution']
         create_riddles_query += "(" + str(riddle_number) + ", " + route_id + ", '" + riddle_description + "', '" + riddle_type + "', '" + riddle_solution + "'),"
         riddle_number = riddle_number + 1
     curosor.execute(create_riddles_query[:-1])
     dbconx.commit()
     curosor.close()
     return jsonify({'statu' : 'success'})
+
+@app.route('/lyon_quest/game/get_google_labels/', methods = ['POST'])
+def get_google_labels():
+    verifier = GoogleImageVerifier('creds.json')
+    label = request.json['label']
+    labels = verifier.getLabels('arbre')
+    print(labels)
 
 ##------------------------------------------------------------------------
 
