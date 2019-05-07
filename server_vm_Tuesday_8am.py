@@ -173,6 +173,7 @@ def get_all_routes():
         query = "SELECT * FROM route"
         cursor.execute(query)
         records = parse_dbresponse(cursor)
+        print(records)
         routes = []
         for row in records:
 
