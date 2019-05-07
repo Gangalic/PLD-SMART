@@ -4,14 +4,9 @@ import os
 import sys
 from PIL import Image
 import pickle
-
-#import pytorch
 import torch
 from torchvision import transforms
-
 import torchvision
-print(torchvision.__version__)
-print(torch.__version__)
 
 data_transforms = {
     'test': transforms.Compose([
@@ -43,7 +38,6 @@ class CustomImageVerifier:
         
         image = Image.open(BytesIO(image))
         image = data_transforms['test'](image).unsqueeze(0)
-        # print(image.shape)
         outputs = self.model(image)
 
         softmax = torch.nn.Softmax()
