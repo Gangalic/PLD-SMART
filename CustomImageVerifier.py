@@ -7,6 +7,7 @@ import pickle
 import torch
 from torchvision import transforms
 import torchvision
+from CloudStorage import ImageUploader 
 
 data_transforms = {
     'test': transforms.Compose([
@@ -17,13 +18,16 @@ data_transforms = {
     ])
 }
 
+googleCredentialsPath = 'creds.json'
+bucket_name='smart_images_dataset'
 
 class CustomImageVerifier:
     def __init__(self,modelPath):
-        # Instantiates a client
+        #torch 
         self.model = torch.load(modelPath,map_location='cpu')
         self.model.eval()
-
+        # cloud storage
+        self.imageUploader = ImageUploader(googleCredentialsPath,bucket_name)
         with open('classNames', 'rb') as f:
             self.classNames = pickle.load(f)
 
@@ -54,8 +58,10 @@ class CustomImageVerifier:
         print('probabilities : ', probabilities)
         print('probabilities[pred]', probabilities[0, pred])
         print('probaLabel : ', probaLabel)
-
-        return (predLabel == targetLabel and probaLabel > 0.9)
+        valid  = predLabel == targetLabel and probaLabel > 0.9
+        if(valid):
+          self.imageUploader.uploadUserImage(image,targetLabel)
+        return (valid)
 
 """
 ## Use example
