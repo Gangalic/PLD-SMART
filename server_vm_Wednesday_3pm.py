@@ -63,6 +63,7 @@ class User:
             if user[0] == email:
                 return User(email = email,username = user[1], password_hash = user[2])
         return None
+    
     @staticmethod
     def add_user(user):
         #DB QUERY ---------------------------------------------------------------
@@ -130,7 +131,7 @@ def verify_geocoords(solution, longitude, latitude):
     distance = geopy.distance.geodesic((c_lat, c_long),(latitude,longitude)).m
     return distance <= delta
 
-def verifiy_picture(solution, picture):
+def verify_picture(solution, picture):
     params = solution.split(',')
     label = params[0]
     method = params[1]
@@ -166,57 +167,102 @@ def verify_geocoords_picture(solution, picture, lon, lat):
 def get_all_routes():
     #DB QUERY ---------------------------------------------------------------
                 
-        global dbconx # to have access to the global instance of dbconx
-        connect_db() # connect to the DB
+    global dbconx # to have access to the global instance of dbconx
+    connect_db() # connect to the DB
 
-        cursor = dbconx.cursor()
-        query = "SELECT * FROM route"
-        cursor.execute(query)
-        records = parse_dbresponse(cursor)
-        routes = []
-        for row in records:
+    cursor = dbconx.cursor()
+    query = "SELECT * FROM route"
+    cursor.execute(query)
+    records = parse_dbresponse(cursor)
+    routes = []
+    for row in records:
 
-            specific_query = " \
-                SELECT plays.email, plays.user_comment, plays.user_rating \
-                FROM plays \
-                WHERE plays.route_id = '" + str(row['route_id']) + "' \
-            "
+        specific_query = " \
+            SELECT plays.email, plays.user_comment, plays.user_rating \
+            FROM plays \
+            WHERE plays.route_id = '" + str(row['route_id']) + "' \
+        "
 
-            cursor.execute(specific_query)
-            specific_records = parse_dbresponse(cursor)
-            ratings_sum = 0
-            number_of_ratings = 0
-            avg = 0
-            comments = []
-            
-            for rt in specific_records:
-                user_rating = int(rt['user_rating'])
-                if(user_rating >= 0):
-                    comments.append({'email' : rt['email'] , 'score' : user_rating, 'comment' : rt['user_comment']})
-                    ratings_sum = ratings_sum + user_rating
-                    number_of_ratings = number_of_ratings + 1
-                
-                
-            if number_of_ratings > 0:
-                avg = ratings_sum / number_of_ratings
-            
-        
+        cursor.execute(specific_query)
+        specific_records = parse_dbresponse(cursor)
+        ratings_sum = 0
+        number_of_ratings = 0
+        avg = 0
+        comments = []
 
-            route = {
-                'route_id' : row['route_id'],
-                'title' : row['title'],
-                'description' : row['description'],
-                'avg_rating' : avg,
-                'number_of_votes' : number_of_ratings,
-                'comments' : comments
-            }
+        for rt in specific_records:
+            user_rating = int(rt['user_rating'])
+            if(user_rating >= 0):
+                comments.append({'email' : rt['email'] , 'score' : user_rating, 'comment' : rt['user_comment']})
+                ratings_sum = ratings_sum + user_rating
+                number_of_ratings = number_of_ratings + 1
 
-            routes.append(route)
-        cursor.close()
-        dbconx.close()
-        return jsonify({'routes' : routes})
+
+        if number_of_ratings > 0:
+            avg = ratings_sum / number_of_ratings
+
+
+
+        route = {
+            'route_id' : row['route_id'],
+            'title' : row['title'],
+            'description' : row['description'],
+            'avg_rating' : avg,
+            'number_of_votes' : number_of_ratings,
+            'comments' : comments
+        }
+
+        routes.append(route)
+    cursor.close()
+    dbconx.close()
+    return jsonify({'routes' : routes})
     #DB QUERY END ------------------------------------------------------------
 
+@app.route('/lyon_quest/game/route_comments/', methods = ['POST'])
+def get_route_comments():
+    #DB QUERY ---------------------------------------------------------------
+    print(request.json)
+                    
+    global dbconx # to have access to the global instance of dbconx
+    connect_db() # connect to the DB
+    
+    cursor = dbconx.cursor()
+    query = "SELECT * FROM route WHERE route_id = " + str(request.json['route_id'])
+    cursor.execute(query)
+    records = parse_dbresponse(cursor)
+    row = records[0]
+
+    specific_query = " \
+        SELECT plays.email, plays.user_comment, plays.user_rating \
+        FROM plays \
+        WHERE plays.route_id = '" + str(row['route_id']) + "' \
+    "
+
+    cursor.execute(specific_query)
+    specific_records = parse_dbresponse(cursor)
+    ratings_sum = 0
+    number_of_ratings = 0
+    avg = 0
+    comments = []
+
+    for rt in specific_records:
+        user_rating = int(rt['user_rating'])
+        if(user_rating >= 0):
+            comments.append({'email' : rt['email'] , 'score' : user_rating, 'comment' : rt['user_comment']})
+            ratings_sum = ratings_sum + user_rating
+            number_of_ratings = number_of_ratings + 1
+
+    if number_of_ratings > 0:
+        avg = ratings_sum / number_of_ratings
+
+    comments = {
+        'comments' : comments
+    }
+
+    cursor.close()
+    dbconx.close()
+    return jsonify(comments)
+    
 @app.route('/lyon_quest/game/user_stats/', methods = ['POST'])
 def user_stats():
     #DB QUERY ---------------------------------------------------------------
@@ -349,7 +395,7 @@ def user_start_route():
     #DB QUERY END ------------------------------------------------------------
 
 @app.route('/lyon_quest/game/verify_riddle/', methods = ['POST'])
-def verifiy_riddle():
+def verify_riddle():
     email = request.json['email']
     route_id = str(request.json['route_id'])
     riddle_status = 'started'
@@ -385,7 +431,7 @@ def verifiy_riddle():
         correct = verify_geocoords(riddle_solution, lon, lat)
     elif riddle_type == 'picture':
         picture = base64.b64decode(request.json['picture'])
-        correct = verifiy_picture(riddle_solution, picture)
+        correct = verify_picture(riddle_solution, picture)
     elif riddle_type == 'dest_pict':
         lat = float(request.json['latitude'])
         lon = float(request.json['longitude'])
@@ -487,8 +533,13 @@ def add_route():
 
     for riddle in request.json['riddles']:
         riddle_type = riddle['type']
+        if riddle_type == 'password':
+            riddle_solution = riddle['solution']
+        elif riddle_type == "geocoords":
+            riddle_solution = str(riddle['latitude']) + ',' + str(riddle['longitude']) + ',' + str(riddle['delta'])
+        elif riddle_type == "picture":
+            riddle_solution = riddle['solution'] + ',' + riddle['method']
         riddle_description = riddle['text']
-        riddle_solution = riddle['solution']
         create_riddles_query += "(" + str(riddle_number) + ", " + route_id + ", '" + riddle_description + "', '" + riddle_type + "', '" + riddle_solution + "'),"
         riddle_number = riddle_number + 1
     cursor.execute(create_riddles_query[:-1])
@@ -497,11 +548,20 @@ def add_route():
     dbconx.close()
     return jsonify({'status' : 'success'})
 
+@app.route('/lyon_quest/game/get_google_labels/', methods = ['POST'])
+def get_google_labels():
+    print(request.json)
+    verifier = GoogleImageVerifier('/var/www/html/lyon_quest/creds.json')
+    label = request.json['label']
+    labels = verifier.getLabels(label)
+    print(labels)
+    return jsonify({'labels' : labels})
+
 ##------------------------------------------------------------------------
 
 
 
 @app.route('/lyon_quest/resource/', methods = ['GET'])
 def get_resource():
-    return jsonify({'data': 'Hello there!'})
+    return jsonify({'data': 'Welcome to LyonQuest API!'})
 
