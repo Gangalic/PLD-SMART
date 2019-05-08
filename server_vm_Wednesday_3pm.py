@@ -131,21 +131,28 @@ def verify_geocoords(solution, longitude, latitude):
     distance = geopy.distance.geodesic((c_lat, c_long),(latitude,longitude)).m
     return distance <= delta
 
-def verify_picture(solution, picture):
+def verify_picture(solution, picture64):
     params = solution.split(',')
     label = params[0]
     method = params[1]
     correct = False
     if (method == 'google'):
+        picture = base64.b64decode(picture64)
         verifier = GoogleImageVerifier('/var/www/html/lyon_quest/creds.json')
         correct = verifier.verify(picture,label)
     else:
-        verifier = CustomImageVerifier('/var/www/html/lyon_quest/resnet.pth')
-        correct = verifier.verify(picture, label)
+        params = {
+            'label': label,
+            'picture': picture64
+        }
+        headers={'Accept': 'application/json'}
+        url = '35.224.249.114/lyon_quest/image_recognition'
+        r = requests.get(url, params=params, heasers=headers)
+        correct = json.loads(r.text)['correct']
 
     return correct
 
-def verify_geocoords_picture(solution, picture, lon, lat):
+def verify_geocoords_picture(solution, picture64, lon, lat):
     params = solution.split(',')
     c_lat = float(params[0])
     c_long = float(params[1])
@@ -155,11 +162,19 @@ def verify_geocoords_picture(solution, picture, lon, lat):
     distance = geopy.distance.geodesic((c_lat, c_long),(lat,lon)).m
     correct = True
     if (method == 'google'):
+        picture = base64.b64decode(picture64)
         verifier = GoogleImageVerifier('/var/www/html/lyon_quest/creds.json')
         correct = verifier.verify(picture, label)
     else:
-        verifier = CustomImageVerifier('/var/www/html/lyon_quest/resnet.pth')
-        correct = verifier.verify(picture, label)
+        params = {
+            'label': label,
+            'picture': picture64
+        }
+        headers={'Accept': 'application/json'}
+        url = '35.224.249.114/lyon_quest/image_recognition'
+        r = requests.get(url, params=params, heasers=headers)
+        correct = json.loads(r.text)['correct']
+    
     return ( distance <= delta ) and correct
 #   |~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -430,13 +445,11 @@ def verify_riddle():
         lon = float(request.json['longitude'])
         correct = verify_geocoords(riddle_solution, lon, lat)
     elif riddle_type == 'picture':
-        picture = base64.b64decode(request.json['picture'])
-        correct = verify_picture(riddle_solution, picture)
+        correct = verify_picture(riddle_solution, request.json['picture'])
     elif riddle_type == 'dest_pict':
         lat = float(request.json['latitude'])
         lon = float(request.json['longitude'])
-        picture = base64.b64decode(request.json['picture'])
-        correct = verify_geocoords_picture(riddle_solution, picture, lon, lat)
+        correct = verify_geocoords_picture(riddle_solution, prequest.json['picture'], lon, lat)
 
     if (correct):
         result['status'] = 'success'
