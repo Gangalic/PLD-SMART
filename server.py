@@ -492,10 +492,12 @@ def add_route():
 
 @app.route('/lyon_quest/game/get_google_labels/', methods = ['POST'])
 def get_google_labels():
+    print(request.json)
     verifier = GoogleImageVerifier('creds.json')
     label = request.json['label']
-    labels = verifier.getLabels('arbre')
+    labels = verifier.getLabels(label)
     print(labels)
+    return jsonify({'lables' : labels})
 
 ##------------------------------------------------------------------------
 
